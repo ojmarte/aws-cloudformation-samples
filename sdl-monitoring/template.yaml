@@ -21,7 +21,7 @@ Parameters:
   pCloudWatchLogsRetentionInDays:
     Description: Number of days log events are kept in CloudWatch Logs
     Type: Number
-    Default: 14
+    Default: 7
     AllowedValues:
       - 1
       - 3
@@ -58,13 +58,13 @@ Globals:
 
 Resources:
   # S3 Bucket for Monitoring
-  DataLakeMonitoringBucket:
+  rDataLakeMonitoringBucket:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-monitoring-bucket"
 
   # Secret for Monitoring
-  MonitorSecret:
+  rMonitorSecret:
     Type: 'AWS::SecretsManager::Secret'
     Properties:
       Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-monitoring-secret"
@@ -74,13 +74,13 @@ Resources:
         }
 
   # SNS Topic
-  MonitorTopic:
+  rMonitorTopic:
     Type: 'AWS::SNS::Topic'
     Properties:
       TopicName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-monitor-topic"
 
   # IAM Role for Lambda
-  MonitorLambdaRole:
+  rMonitorLambdaRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -132,7 +132,7 @@ Resources:
                 Resource: '*'
 
   # Lambda Function for Monitoring Events
-  MonitorEventSubscriber:
+  rMonitorEventSubscriber:
     Type: 'AWS::Serverless::Function'
     Properties:
       Description: !Sub "Monitors events and sends notifications to Microsoft Teams"
@@ -150,7 +150,7 @@ Resources:
       CodeUri: ./lambda/monitor-event-subscriber/src
 
   # Permission for EventBridge to invoke Lambda
-  PermissionForEventBridgeToInvokeLambda:
+  rPermissionForEventBridgeToInvokeLambda:
     Type: 'AWS::Lambda::Permission'
     Properties:
       FunctionName: !Ref MonitorEventSubscriber
@@ -159,7 +159,7 @@ Resources:
       SourceArn: !GetAtt EventBridgeRule.Arn
 
   # EventBridge Rule to capture state changes
-  EventBridgeRule:
+  rEventBridgeRule:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-capture-state-changes"
@@ -182,7 +182,7 @@ Resources:
           Id: "GlueLogsTarget"
 
   # CloudWatch Log Subscription Filter for Glue Jobs
-  GlueJobLogSubscriptionFilter:
+  rGlueJobLogSubscriptionFilter:
     Type: 'AWS::Logs::SubscriptionFilter'
     Properties:
       DestinationArn: !GetAtt EventBridgeRule.Arn
@@ -190,7 +190,7 @@ Resources:
       LogGroupName: !Ref pGlueJobLogGroupName
 
   # CloudWatch Log Subscription Filter for Glue Crawlers
-  GlueCrawlerLogSubscriptionFilter:
+  rGlueCrawlerLogSubscriptionFilter:
     Type: 'AWS::Logs::SubscriptionFilter'
     Properties:
       DestinationArn: !GetAtt EventBridgeRule.Arn
@@ -198,7 +198,7 @@ Resources:
       LogGroupName: !Ref pGlueCrawlerLogGroupName
   
   # Athena Database
-  MonitorDatabase:
+  rMonitorDatabase:
     Type: 'AWS::Glue::Database'
     Properties:
       CatalogId: !Ref 'AWS::AccountId'
@@ -208,7 +208,7 @@ Resources:
         LocationUri: !Sub "s3://${DataLakeMonitoringBucket}/${pOrg}-${pDomain}-${pEnvironment}-monitor-db/"
 
   # Athena Table for Monitoring
-  MonitorTable:
+  rMonitorTable:
     Type: 'AWS::Glue::Table'
     Properties:
       DatabaseName: !Ref MonitorDatabase
@@ -264,12 +264,12 @@ Resources:
         TableType: "EXTERNAL_TABLE"
 
 Outputs:
-  MonitoringBucketName:
+  oMonitoringBucketName:
     Description: Name of the S3 bucket used for monitoring data
     Value: !Ref DataLakeMonitoringBucket
-  MonitorSNSTopic:
+  oMonitorSNSTopic:
     Description: ARN of the SNS topic for monitoring events
     Value: !Ref MonitorTopic
-  MonitorLambdaFunction:
+  oMonitorLambdaFunction:
     Description: ARN of the Lambda function for monitoring event processing
     Value: !GetAtt MonitorEventSubscriber.Arn

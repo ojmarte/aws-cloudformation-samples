@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Simple Data Lake Setup with Parameters
+
+Parameters:
+  pPipelineReference:
+    Description: Reference for the pipeline
+    Type: String
+    Default: none
+  pOrg:
+    Description: Name of the organization owning the data lake
+    Type: String
+    Default: "default-org"
+  pDomain:
+    Description: Data domain name
+    Type: String
+    Default: "default-domain"
+  pEnvironment:
+    Description: Environment name
+    Type: String
+    Default: "dev"
+  pCloudWatchLogsRetentionInDays:
+    Description: Number of days log events are kept in CloudWatch Logs
+    Type: Number
+    Default: 14
+    AllowedValues:
+      - 1
+      - 3
+      - 5
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 120
+      - 150
+      - 180
+      - 365
+      - 400
+      - 545
+      - 731
+      - 1827
+      - 3653
+  pGlueJobLogGroupName:
+    Description: Name of the CloudWatch log group for Glue jobs
+    Type: String
+  pGlueCrawlerLogGroupName:
+    Description: Name of the CloudWatch log group for Glue crawlers
+    Type: String
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Handler: lambda_function.lambda_handler
+
+Resources:
+  rLandingBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-landing-bucket"
+  
+  rProcessedBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-processed-bucket"
+
+  rGlueScriptsBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-glue-scripts-bucket"
+  
+  rETLTaskLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Description: !Sub "Performs ETL tasks"
+      FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-etl-task"
+      MemorySize: 128
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300
+      Environment:
+        Variables:
+          REGION: !Ref "AWS::Region"
+          LANDING_BUCKET: !Ref LandingBucket
+          PROCESSED_BUCKET: !Ref ProcessedBucket
+      CodeUri: ./lambda/etl-task/src
+  
+  rGlueCrawler:
+    Type: 'AWS::Glue::Crawler'
+    Properties:
+      Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeCrawler"
+      Role: !GetAtt GlueServiceRole.Arn
+      DatabaseName: !Sub '${pOrg}-${pDomain}-${pEnvironment}-data-lake-database'
+      Targets:
+        S3Targets:
+          - Path: !Sub 's3://${LandingBucket}/data/'
+
+  rGlueETLJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeETLJob"
+      Role: !GetAtt GlueServiceRole.Arn
+      Command:
+        Name: 'glueetl'
+        ScriptLocation: 's3://${GlueScriptsBucket}/GlueScript/glue_script.py'
+        PythonVersion: '3'
+  
+  rGlueServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub '${pOrg}-${pDomain}-${pEnvironment}-GlueServiceRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'glue.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'GlueServicePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:*'
+                  - 'logs:*'
+                  - 'cloudwatch:*'
+                Resource: '*'
+
+  rLambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub '{pOrg}-${pDomain}-${pEnvironment}-LambdaExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'LambdaPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'logs:*'
+                  - 's3:*'
+                Resource: '*'
+
+  rGlueJobLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Ref pGlueJobLogGroupName
+      RetentionInDays: !Ref pCloudWatchLogsRetentionInDays
+
+  rGlueCrawlerLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Ref pGlueCrawlerLogGroupName
+      RetentionInDays: !Ref pCloudWatchLogsRetentionInDays
+
+Outputs:
+  oLandingBucketName:
+    Value: !Ref LandingBucket
+    Description: "Name of the landing bucket"
+  
+  oProcessedBucketName:
+    Value: !Ref ProcessedBucket
+    Description: "Name of the processed bucket"
+
+  oGlueScriptsBucketName:
+    Value: !Ref GlueScriptsBucket
+    Description: "Name of the Glue scripts bucket"
