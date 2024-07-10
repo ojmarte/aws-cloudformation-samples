@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: S3 Bucket for Storing Lambda Function and Glue Script
+
+Parameters:
+  pOrg:
+    Description: Name of the organization
+    Type: String
+    Default: "default-org"
+  pDomain:
+    Description: Data domain name
+    Type: String
+    Default: "default-domain"
+  pEnvironment:
+    Description: Environment name
+    Type: String
+    Default: "dev"
+
+Resources:
+  rLambdaGlueS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
+
+Outputs:
+  oLambdaGlueS3BucketName:
+    Value: !Ref rLambdaGlueS3Bucket
+    Description: "Name of the S3 bucket for storing Lambda function and Glue script"

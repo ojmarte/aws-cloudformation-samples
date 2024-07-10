@@ -133,7 +133,7 @@ Resources:
 
   # Lambda Function for Monitoring Events
   rMonitorEventSubscriber:
-    Type: 'AWS::Serverless::Function'
+    Type: 'AWS::Lambda::Function'
     Properties:
       Description: !Sub "Monitors events and sends notifications to Microsoft Teams"
       FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-monitor-event-subscriber"

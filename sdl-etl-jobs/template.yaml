@@ -47,11 +47,6 @@ Parameters:
     Description: Name of the CloudWatch log group for Glue crawlers
     Type: String
 
-Globals:
-  Function:
-    Runtime: python3.12
-    Handler: lambda_function.lambda_handler
-
 Resources:
   rLandingBucket:
     Type: 'AWS::S3::Bucket'
@@ -62,46 +57,55 @@ Resources:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-processed-bucket"
-
-  rGlueScriptsBucket:
-    Type: 'AWS::S3::Bucket'
-    Properties:
-      BucketName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-glue-scripts-bucket"
   
   rETLTaskLambda:
-    Type: 'AWS::Serverless::Function'
+    Type: 'AWS::Lambda::Function'
     Properties:
       Description: !Sub "Performs ETL tasks"
       FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-etl-task"
       MemorySize: 128
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt rLambdaExecutionRole.Arn
       Timeout: 300
       Environment:
         Variables:
           REGION: !Ref "AWS::Region"
-          LANDING_BUCKET: !Ref LandingBucket
-          PROCESSED_BUCKET: !Ref ProcessedBucket
-      CodeUri: ./lambda/etl-task/src
+          LANDING_BUCKET: !Ref rLandingBucket
+          PROCESSED_BUCKET: !Ref rProcessedBucket
+      Code:
+        S3Bucket: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
+        S3Key: 'lambda/etl-task/src/lambda_function.zip'
+      Runtime: python3.12
+      Handler: lambda_function.lambda_handler
   
   rGlueCrawler:
     Type: 'AWS::Glue::Crawler'
     Properties:
       Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeCrawler"
-      Role: !GetAtt GlueServiceRole.Arn
+      Role: !GetAtt rGlueServiceRole.Arn
       DatabaseName: !Sub '${pOrg}-${pDomain}-${pEnvironment}-data-lake-database'
       Targets:
         S3Targets:
-          - Path: !Sub 's3://${LandingBucket}/data/'
+          - Path: !Sub 's3://${rLandingBucket}/data/'
+      Schedule:
+        ScheduleExpression: 'cron(0/5 * * * ? *)'
+      Configuration: !Sub '{"Version":1.0,"CrawlerOutput":{"Partitions":{"AddOrUpdateBehavior":"InheritFromTable"}}}'
 
   rGlueETLJob:
     Type: 'AWS::Glue::Job'
     Properties:
       Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeETLJob"
-      Role: !GetAtt GlueServiceRole.Arn
+      Role: !GetAtt rGlueServiceRole.Arn
       Command:
         Name: 'glueetl'
-        ScriptLocation: 's3://${GlueScriptsBucket}/GlueScript/glue_script.py'
+        ScriptLocation: 's3://${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket/glue/glue-scripts/src/glue_script.zip'
         PythonVersion: '3'
+      DefaultArguments:
+        "--enable-continuous-log-filter": "true"
+        "--enable-metrics": "true"
+        "--log-group": !Ref pGlueJobLogGroupName
+        "--log-stream-prefix": "glue-etl-"
+      MaxRetries: 1
+      Timeout: 2880
   
   rGlueServiceRole:
     Type: 'AWS::IAM::Role'
@@ -125,11 +129,17 @@ Resources:
                   - 'logs:*'
                   - 'cloudwatch:*'
                 Resource: '*'
+              - Effect: 'Allow'
+                Action:
+                  - 'glue:GetDatabase'
+                Resource: 
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog'
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/my-org-devops-dev-data-lake-database'
 
   rLambdaExecutionRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      RoleName: !Sub '{pOrg}-${pDomain}-${pEnvironment}-LambdaExecutionRole'
+      RoleName: !Sub '${pOrg}-${pDomain}-${pEnvironment}-LambdaExecutionRole'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -162,13 +172,9 @@ Resources:
 
 Outputs:
   oLandingBucketName:
-    Value: !Ref LandingBucket
+    Value: !Ref rLandingBucket
     Description: "Name of the landing bucket"
   
   oProcessedBucketName:
-    Value: !Ref ProcessedBucket
+    Value: !Ref rProcessedBucket
     Description: "Name of the processed bucket"
-
-  oGlueScriptsBucketName:
-    Value: !Ref GlueScriptsBucket
-    Description: "Name of the Glue scripts bucket"

@@ -1,0 +1,31 @@
+[
+    {
+      "ParameterKey": "pPipelineReference",
+      "ParameterValue": "none"
+    },
+    {
+      "ParameterKey": "pOrg",
+      "ParameterValue": "my-org"
+    },
+    {
+      "ParameterKey": "pDomain",
+      "ParameterValue": "devops"
+    },
+    {
+      "ParameterKey": "pEnvironment",
+      "ParameterValue": "dev"
+    },
+    {
+      "ParameterKey": "pCloudWatchLogsRetentionInDays",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "pGlueJobLogGroupName",
+      "ParameterValue": "my-glue-job-log-group"
+    },
+    {
+      "ParameterKey": "pGlueCrawlerLogGroupName",
+      "ParameterValue": "my-glue-crawler-log-group"
+    }
+  ]
+  

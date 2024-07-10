@@ -1,0 +1,15 @@
+[
+    {
+      "ParameterKey": "pOrg",
+      "ParameterValue": "my-org"
+    },
+    {
+      "ParameterKey": "pDomain",
+      "ParameterValue": "devops"
+    },
+    {
+      "ParameterKey": "pEnvironment",
+      "ParameterValue": "dev"
+    }
+  ]
+  
