@@ -86,9 +86,15 @@ Resources:
       Targets:
         S3Targets:
           - Path: !Sub 's3://${rLandingBucket}/data/'
-      Schedule:
-        ScheduleExpression: 'cron(0/5 * * * ? *)'
-      Configuration: !Sub '{"Version":1.0,"CrawlerOutput":{"Partitions":{"AddOrUpdateBehavior":"InheritFromTable"}}}'
+      Configuration: !Sub |
+        {
+          "Version": 1.0,
+          "CrawlerOutput": {
+            "Partitions": {
+              "AddOrUpdateBehavior": "InheritFromTable"
+            }
+          }
+        }
 
   rGlueETLJob:
     Type: 'AWS::Glue::Job'
@@ -102,8 +108,8 @@ Resources:
       DefaultArguments:
         "--enable-continuous-log-filter": "true"
         "--enable-metrics": "true"
-        "--log-group": !Ref pGlueJobLogGroupName
-        "--log-stream-prefix": "glue-etl-"
+        "--continuous-log-logGroup": !Ref pGlueJobLogGroupName
+        "--continuous-log-logStreamPrefix": "glue-etl-"
       MaxRetries: 1
       Timeout: 2880
   

@@ -51,11 +51,6 @@ Parameters:
     Type: String
     Default: "https://outlook.office.com/webhook/YOUR/TEAMS/WEBHOOK"
 
-Globals:
-  Function:
-    Runtime: python3.12
-    Handler: lambda_function.lambda_handler
-
 Resources:
   # S3 Bucket for Monitoring
   rDataLakeMonitoringBucket:
@@ -104,7 +99,7 @@ Resources:
               - Effect: 'Allow'
                 Action:
                   - 'sns:Publish'
-                Resource: !Ref MonitorTopic
+                Resource: !Ref rMonitorTopic
               - Effect: 'Allow'
                 Action:
                   - 's3:PutObject*'
@@ -114,7 +109,7 @@ Resources:
                   - 's3:GetBucket*'
                   - 's3:List*'
                   - 's3:Head*'
-                Resource: !Sub "arn:aws:s3:::${DataLakeMonitoringBucket}/*"
+                Resource: !Sub "arn:aws:s3:::${rDataLakeMonitoringBucket}/*"
               - Effect: 'Allow'
                 Action:
                   - 'glue:CreateTable'
@@ -138,25 +133,29 @@ Resources:
       Description: !Sub "Monitors events and sends notifications to Microsoft Teams"
       FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-monitor-event-subscriber"
       MemorySize: 128
-      Role: !GetAtt MonitorLambdaRole.Arn
+      Role: !GetAtt rMonitorLambdaRole.Arn
       Timeout: 300
       Environment:
         Variables:
-          TEAMS_WEBHOOK_URL: !Ref MonitorSecret
+          TEAMS_WEBHOOK_URL: !Ref rMonitorSecret
           REGION: !Ref "AWS::Region"
-          MONITOR_S3: !Ref DataLakeMonitoringBucket
-          MONITOR_DATABASE: !Ref MonitorDatabase
-          MONITOR_TABLE: !Ref MonitorTable
-      CodeUri: ./lambda/monitor-event-subscriber/src
+          MONITOR_S3: !Ref rDataLakeMonitoringBucket
+          MONITOR_DATABASE: !Ref rMonitorDatabase
+          MONITOR_TABLE: !Ref rMonitorTable
+      Code: 
+        S3Bucket: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
+        S3Key: 'lambda/monitor-event-subscriber/src/lambda_function.zip'
+      Runtime: python3.12
+      Handler: lambda_function.lambda_handler
 
   # Permission for EventBridge to invoke Lambda
   rPermissionForEventBridgeToInvokeLambda:
     Type: 'AWS::Lambda::Permission'
     Properties:
-      FunctionName: !Ref MonitorEventSubscriber
+      FunctionName: !Ref rMonitorEventSubscriber
       Action: 'lambda:InvokeFunction'
       Principal: 'events.amazonaws.com'
-      SourceArn: !GetAtt EventBridgeRule.Arn
+      SourceArn: !GetAtt rEventBridgeRule.Arn
 
   # EventBridge Rule to capture state changes
   rEventBridgeRule:
@@ -178,24 +177,65 @@ Resources:
             - "Failed"
             - "Succeeded"
       Targets:
-        - Arn: !Ref MonitorTopic
+        - Arn: !Ref rMonitorTopic
           Id: "GlueLogsTarget"
+  
+  rLogForwarderLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'LogForwarderLambdaPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: 'Allow'
+                Action:
+                  - 'events:PutEvents'
+                Resource: '*'
 
-  # CloudWatch Log Subscription Filter for Glue Jobs
+  rLogForwarderLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Description: "Forwards CloudWatch logs to EventBridge"
+      FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-log-forwarder"
+      MemorySize: 128
+      Role: !GetAtt rLogForwarderLambdaRole.Arn
+      Timeout: 300
+      Code: 
+        S3Bucket: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
+        S3Key: 'lambda/log-forwarder/src/lambda_function.zip'
+      Runtime: python3.12
+      Handler: lambda_function.lambda_handler
+
+
   rGlueJobLogSubscriptionFilter:
     Type: 'AWS::Logs::SubscriptionFilter'
     Properties:
-      DestinationArn: !GetAtt EventBridgeRule.Arn
+      DestinationArn: !GetAtt rLogForwarderLambda.Arn
       FilterPattern: '{ $.detail.state = "TIMEOUT" || $.detail.state = "FAILED" || $.detail.state = "SUCCEEDED" || $.detail.state = "STOPPED" || $.detail.state = "Failed" || $.detail.state = "Succeeded" }'
       LogGroupName: !Ref pGlueJobLogGroupName
+      RoleArn: !GetAtt rLogForwarderLambdaRole.Arn
 
-  # CloudWatch Log Subscription Filter for Glue Crawlers
   rGlueCrawlerLogSubscriptionFilter:
     Type: 'AWS::Logs::SubscriptionFilter'
     Properties:
-      DestinationArn: !GetAtt EventBridgeRule.Arn
+      DestinationArn: !GetAtt rLogForwarderLambda.Arn
       FilterPattern: '{ $.detail.state = "TIMEOUT" || $.detail.state = "FAILED" || $.detail.state = "SUCCEEDED" || $.detail.state = "STOPPED" || $.detail.state = "Failed" || $.detail.state = "Succeeded" }'
       LogGroupName: !Ref pGlueCrawlerLogGroupName
+      RoleArn: !GetAtt rLogForwarderLambdaRole.Arn
   
   # Athena Database
   rMonitorDatabase:
@@ -205,13 +245,13 @@ Resources:
       DatabaseInput:
         Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-monitor-db"
         Description: "Monitoring DB"
-        LocationUri: !Sub "s3://${DataLakeMonitoringBucket}/${pOrg}-${pDomain}-${pEnvironment}-monitor-db/"
+        LocationUri: !Sub "s3://${rDataLakeMonitoringBucket}/${pOrg}-${pDomain}-${pEnvironment}-monitor-db/"
 
   # Athena Table for Monitoring
   rMonitorTable:
     Type: 'AWS::Glue::Table'
     Properties:
-      DatabaseName: !Ref MonitorDatabase
+      DatabaseName: !Ref rMonitorDatabase
       CatalogId: !Ref 'AWS::AccountId'
       TableInput:
         Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-monitor-table"
@@ -258,7 +298,7 @@ Resources:
           InputFormat: "org.apache.hadoop.mapred.TextInputFormat"
           OutputFormat: "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
           Compressed: true
-          Location: !Sub "s3://${DataLakeMonitoringBucket}/${pOrg}-${pDomain}-${pEnvironment}-monitor-db/${pOrg}-${pDomain}-${pEnvironment}-monitor-table/"
+          Location: !Sub "s3://${rDataLakeMonitoringBucket}/${pOrg}-${pDomain}-${pEnvironment}-monitor-db/${pOrg}-${pDomain}-${pEnvironment}-monitor-table/"
           SerdeInfo:
             SerializationLibrary: "org.openx.data.jsonserde.JsonSerDe"
         TableType: "EXTERNAL_TABLE"
@@ -266,10 +306,10 @@ Resources:
 Outputs:
   oMonitoringBucketName:
     Description: Name of the S3 bucket used for monitoring data
-    Value: !Ref DataLakeMonitoringBucket
+    Value: !Ref rDataLakeMonitoringBucket
   oMonitorSNSTopic:
     Description: ARN of the SNS topic for monitoring events
-    Value: !Ref MonitorTopic
+    Value: !Ref rMonitorTopic
   oMonitorLambdaFunction:
     Description: ARN of the Lambda function for monitoring event processing
-    Value: !GetAtt MonitorEventSubscriber.Arn
+    Value: !GetAtt rMonitorEventSubscriber.Arn
