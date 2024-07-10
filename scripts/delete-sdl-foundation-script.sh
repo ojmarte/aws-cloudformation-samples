@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-STACK_NAME="s3-bucket-stack"
+STACK_NAME="foundation-stack"
 
 # Get the S3 bucket name from the CloudFormation stack outputs
 BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='oLambdaGlueS3BucketName'].OutputValue" --output text)

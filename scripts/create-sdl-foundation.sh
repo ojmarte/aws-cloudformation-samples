@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-STACK_NAME="s3-bucket-stack"
+STACK_NAME="foundation-stack"
 TEMPLATE_FILE="../sdl-foundation/template.yaml"
 PARAMETERS_FILE="../sdl-foundation/parameters.json"
 LAMBDA_ETL_TASK_SRC="../sdl-etl-jobs/lambda/etl-task/src/lambda_function.py"
@@ -12,6 +12,7 @@ LAMBDA_ETL_TASK_ZIP="../sdl-etl-jobs/lambda/etl-task/src/lambda_function.zip"
 LAMBDA_MONITOR_EVENT_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.zip"
 LAMBDA_LOG_FORWARDER_ZIP="../sdl-monitoring/lambda/log-forwarder/src/lambda_function.zip"
 GLUE_SCRIPT_ZIP="../sdl-etl-jobs/glue/glue-scripts/src/glue_script.zip"
+LAMBDA_MONITOR_LAYER_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
 
 # Zip the Lambda function and Glue script
 zip -j $LAMBDA_ETL_TASK_ZIP $LAMBDA_ETL_TASK_SRC
@@ -40,6 +41,8 @@ echo "S3 bucket created: $BUCKET_NAME"
 aws s3 cp $LAMBDA_ETL_TASK_ZIP s3://$BUCKET_NAME/lambda/etl-task/src/lambda_function.zip
 aws s3 cp $LAMBDA_MONITOR_EVENT_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/lambda_function.zip
 aws s3 cp $GLUE_SCRIPT_ZIP s3://$BUCKET_NAME/glue/glue-scripts/src/glue_script.zip
+aws s3 cp $LAMBDA_LOG_FORWARDER_ZIP s3://$BUCKET_NAME/lambda/log-forwarder/src/lambda_function.zip
+aws s3 cp $LAMBDA_MONITOR_LAYER_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/layer.zip
 
 echo "Lambda functions and Glue script uploaded to S3 bucket."
 
@@ -47,4 +50,5 @@ echo "Lambda functions and Glue script uploaded to S3 bucket."
 echo "Uploaded files:"
 echo "Lambda ETL Task: s3://$BUCKET_NAME/lambda/etl-task/src/lambda_function.zip"
 echo "Lambda Monitor Event Subscriber: s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/lambda_function.zip"
-echo "Glue Script: s3://$BUCKET_NAME/glue/glue-scripts/src/glue_script.zip"
+echo "Lambda Log Forwarder: s3://$BUCKET_NAME/lambda/log-forwarder/src/lambda_function.zip"
+echo "Lambda Monitor Layer: s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/layer.zip"
