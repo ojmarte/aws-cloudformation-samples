@@ -5,19 +5,20 @@ STACK_NAME="sdl-foundation-stack"
 TEMPLATE_FILE="../sdl-foundation/template.yaml"
 PARAMETERS_FILE="../sdl-foundation/parameters.json"
 
-LAMBDA_GLUE_TRIGGER_FUNCTION_SRC="../sdl-etl-jobs/lambda/glue-trigger-function/src/lambda_function.py"
+LAMBDA_GLUE_CRAWLER_TRIGGER_SRC="../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.py"
+LAMBDA_GLUE_JOB_TRIGGER_SRC="../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.py"
 LAMBDA_MONITOR_EVENT_SRC="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.py"
 GLUE_JOB_SCRIPT_SRC="../sdl-etl-jobs/glue/script/src/glue_job.py"
 
-LAMBDA_GLUE_TRIGGER_FUNCTION_ZIP="../sdl-etl-jobs/lambda/glue-trigger-function/src/lambda_function.zip"
+LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.zip"
+LAMBDA_GLUE_JOB_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.zip"
 LAMBDA_MONITOR_EVENT_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.zip"
-GLUE_JOB_SCRIPT_ZIP="../sdl-etl-jobs/glue/script/src/glue_job.zip"
 # LAMBDA_MONITOR_LAYER_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
 
 # Zip the Lambda function and Glue script
-zip -j $LAMBDA_GLUE_TRIGGER_FUNCTION_ZIP $LAMBDA_GLUE_TRIGGER_FUNCTION_SRC
+zip -j $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP $LAMBDA_GLUE_CRAWLER_TRIGGER_SRC
+zip -j $LAMBDA_GLUE_JOB_TRIGGER_ZIP $LAMBDA_GLUE_JOB_TRIGGER_SRC
 zip -j $LAMBDA_MONITOR_EVENT_ZIP $LAMBDA_MONITOR_EVENT_SRC
-zip -j $GLUE_JOB_SCRIPT_ZIP $GLUE_JOB_SCRIPT_SRC
 
 # Get the S3 bucket name from the CloudFormation stack outputs
 BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='oLambdaGlueS3BucketName'].OutputValue" --output text)
@@ -34,18 +35,28 @@ echo "S3 bucket: $BUCKET_NAME"
 aws s3 rm s3://$BUCKET_NAME --recursive
 
 # Upload the Lambda function and Glue script to the S3 bucket
-# Upload the Lambda function and Glue script to the S3 bucket
-aws s3 cp $LAMBDA_GLUE_TRIGGER_FUNCTION_ZIP s3://$BUCKET_NAME/lambda/glue-trigger-function/src/lambda_function.zip
+aws s3 cp $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP s3://$BUCKET_NAME/lambda/glue-crawler-trigger/src/lambda_function.zip
+aws s3 cp $LAMBDA_GLUE_JOB_TRIGGER_ZIP s3://$BUCKET_NAME/lambda/glue-job-trigger/src/lambda_function.zip
 aws s3 cp $LAMBDA_MONITOR_EVENT_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/lambda_function.zip
-aws s3 cp $GLUE_JOB_SCRIPT_ZIP s3://$BUCKET_NAME/glue/script/src/glue_job.zip
-# aws s3 cp $LAMBDA_MONITOR_LAYER_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/layer/layer.zip
+aws s3 cp $GLUE_JOB_SCRIPT_SRC s3://$BUCKET_NAME/glue/script/src/glue_job.py
 
 echo "Lambda functions and Glue script uploaded to S3 bucket."
 
-# Update the CloudFormation stack
-aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE --parameters file://$PARAMETERS_FILE --capabilities CAPABILITY_NAMED_IAM
+# Create a change set
+aws cloudformation create-change-set --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE --parameters file://$PARAMETERS_FILE --capabilities CAPABILITY_NAMED_IAM --change-set-name $CHANGE_SET_NAME
 
-# Wait for the stack to be updated
-aws cloudformation wait stack-update-complete --stack-name $STACK_NAME
+# Wait for the change set to be created
+aws cloudformation wait change-set-create-complete --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME
 
-echo "Stack updated successfully."
+# Describe the change set to check for changes
+CHANGE_SET_STATUS=$(aws cloudformation describe-change-set --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME --query 'Status' --output text)
+EXECUTION_STATUS=$(aws cloudformation describe-change-set --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME --query 'ExecutionStatus' --output text)
+
+# Check if the change set has changes
+if [[ "$CHANGE_SET_STATUS" == "CREATE_COMPLETE" && "$EXECUTION_STATUS" == "AVAILABLE" ]]; then
+    echo "Changes detected. Executing update..."
+    aws cloudformation execute-change-set --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME
+else
+    echo "No changes detected. Deleting change set..."
+    aws cloudformation delete-change-set --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME
+fi

@@ -40,14 +40,8 @@ Parameters:
       - 731
       - 1827
       - 3653
-  pGlueJobLogGroupName:
-    Description: Name of the CloudWatch log group for Glue jobs
-    Type: String
-  pGlueCrawlerLogGroupName:
-    Description: Name of the CloudWatch log group for Glue crawlers
-    Type: String
-  pLambdaLogGroup:
-    Description: Name of the CloudWatch log group for Glue crawlers
+  pLandingBucket:
+    Description: Name of the existing landing bucket
     Type: String
 
 Resources:
@@ -65,30 +59,84 @@ Resources:
     Properties:
       BucketName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-processed-bucket"
 
-  rGlueCrawlerLogGroup:
-    Type: AWS::Logs::LogGroup
+  rLambdaExecutionRole:
+    Type: AWS::IAM::Role
     Properties:
-      LogGroupName: !Ref pGlueCrawlerLogGroupName
-      RetentionInDays: !Ref pCloudWatchLogsRetentionInDays
-
-  rGlueJobLogGroup:
-    Type: AWS::Logs::LogGroup
+      RoleName: lambda-execution-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - lambda.amazonaws.com
+                - glue.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:*
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                  - s3:DeleteObject
+                Resource: "*"
+  
+  rLambdaFunction:
+    Type: AWS::Lambda::Function
     Properties:
-      LogGroupName: !Ref pGlueJobLogGroupName
-      RetentionInDays: !Ref pCloudWatchLogsRetentionInDays
+      FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-glue-trigger-function"
+      Role: !GetAtt rLambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
+        S3Key: 'lambda/glue-trigger-function/src/lambda_function.zip'
+      Runtime: python3.12
+      Handler: lambda_function.lambda_handler
+      Environment:
+        Variables:
+          pOrg: !Ref pOrg
+          pDomain: !Ref pDomain
+          pEnvironment: !Ref pEnvironment
 
-  rLambdaLogGroup:
-      Type: AWS::Logs::LogGroup
-      Properties:
-        LogGroupName: !Ref pLambdaLogGroup
-        RetentionInDays: !Ref pCloudWatchLogsRetentionInDays
+  rLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref rLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      # SourceArn: !GetAtt rLandingBucket.Arn
+
+  rLandingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref rLandingBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: s3:*
+            Resource: 
+              - !Sub "arn:aws:s3:::${pOrg}-${pDomain}-${pEnvironment}-landing-bucket"
+              - !Sub "arn:aws:s3:::${pOrg}-${pDomain}-${pEnvironment}-landing-bucket/*"
 
   rGlueCrawler:
     Type: AWS::Glue::Crawler
     Properties:
       Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-GlueCrawler"
       Role: !GetAtt rGlueServiceRole.Arn
-      DatabaseName: my-database
+      DatabaseName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-database"
       Targets:
         S3Targets:
           - Path: !Sub "s3://${rLandingBucket}"
@@ -109,14 +157,17 @@ Resources:
       Role: !GetAtt rGlueServiceRole.Arn
       Command:
         Name: glueetl
-        ScriptLocation: !Sub 's3://${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket/glue/script/src/glue_job.zip'
+        ScriptLocation: !Sub 's3://${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket/glue/script/src/glue_job.py'
         PythonVersion: '3'
       DefaultArguments:
         "--enable-continuous-log-filter": "true"
         "--enable-continuous-cloudwatch-log": "true"
         "--enable-metrics": "true"
-        "--continuous-log-logGroup": !Ref pGlueCrawlerLogGroupName
         "--continuous-log-logStreamPrefix": "glue-etl-success-"
+        "--JOB_NAME": !Sub "${pOrg}-${pDomain}-${pEnvironment}-GlueJob"
+        "--LANDING_BUCKET": !Sub 's3://${pOrg}-${pDomain}-${pEnvironment}-landing-bucket'
+        "--PROCESSED_BUCKET": !Sub 's3://${pOrg}-${pDomain}-${pEnvironment}-processed-bucket'
+        "--DATABASE": !Sub "${pOrg}-${pDomain}-${pEnvironment}-database"
       MaxRetries: 1
       Timeout: 2880
 
@@ -145,79 +196,19 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                  - glue:*
                 Resource: "*"
-
-  rLambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: lambda-execution-role
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: LambdaExecutionPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - glue:StartCrawler
-                  - glue:StartJobRun
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: "*"
-
-  rLambdaFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-glue-trigger-function"
-      Role: !GetAtt rLambdaExecutionRole.Arn
-      Code:
-        S3Bucket: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
-        S3Key: 'lambda/glue-trigger-function/src/lambda_function.zip'
-      Runtime: python3.12
-      Handler: lambda_function.lambda_handler
-      Environment:
-        Variables:
-          pOrg: !Ref pOrg
-          pDomain: !Ref pDomain
-          pEnvironment: !Ref pEnvironment
-
-  rLambdaInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt rLambdaFunction.Arn
-      Action: lambda:InvokeFunction
-      Principal: s3.amazonaws.com
-      SourceArn: !GetAtt rLandingBucket.Arn
 
 Outputs:
-  oLandingBucketName:
-    Description: "Name of the landing bucket"
-    Value: !Ref rLandingBucket
-  oProcessedBucketName:
-    Description: "Name of the processed bucket"
-    Value: !Ref rProcessedBucket
   oGlueCrawlerName:
     Description: "Name of the Glue crawler"
     Value: !Ref rGlueCrawler
   oGlueJobName:
     Description: "Name of the Glue job"
     Value: !Ref rGlueJob
-  oLambdaFunctionName:
-    Description: "Name of the Lambda function"
-    Value: !Ref rLambdaFunction
-  oGlueCrawlerLogGroupName:
-    Description: "Name of the Glue Crawler log group"
-    Value: !Ref rGlueCrawlerLogGroup
-  oGlueJobLogGroupName:
-    Description: "Name of the Glue Job log group"
-    Value: !Ref rGlueJobLogGroup
-  oLambdaLogGroupName:
-    Description: "Name of the Lambda log group"
-    Value: !Ref rLambdaLogGroup
+  oLandingBucketName:
+    Value: !Ref rLandingBucket
+    Description: "Name of the S3 bucket for landing data"
+  oProcessedBucketName:
+    Value: !Ref rProcessedBucket
+    Description: "Name of the S3 bucket for processed data"

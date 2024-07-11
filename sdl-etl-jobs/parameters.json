@@ -20,16 +20,8 @@
       "ParameterValue": "1"
     },
     {
-      "ParameterKey": "pGlueJobLogGroupName",
-      "ParameterValue": "sdl-glue-job-logs"
-    },
-    {
-      "ParameterKey": "pGlueCrawlerLogGroupName",
-      "ParameterValue": "sdl-glue-crawler-logs"
-    },
-    {
-      "ParameterKey": "pLambdaLogGroup",
-      "ParameterValue": "sdl-lambda-logs"
+      "ParameterKey": "pLandingBucket",
+      "ParameterValue": "my-org-devops-dev-landing-bucket"
     }
   ]
   
