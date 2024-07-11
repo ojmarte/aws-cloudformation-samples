@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-STACK_NAME="simple-data-lake-setup"
+STACK_NAME="sdl-data-lake-stack"
 
 # Function to empty an S3 bucket
 empty_bucket() {

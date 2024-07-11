@@ -1,23 +1,32 @@
 #!/bin/bash
 
 # Variables
-STACK_NAME="foundation-stack"
+STACK_NAME="sdl-foundation-stack"
 TEMPLATE_FILE="../sdl-foundation/template.yaml"
 PARAMETERS_FILE="../sdl-foundation/parameters.json"
 LAMBDA_ETL_TASK_SRC="../sdl-etl-jobs/lambda/etl-task/src/lambda_function.py"
+LAMBDA_SUCCESS_SRC="../sdl-etl-jobs/lambda/success/src/lambda_function.py"
+LAMBDA_FAIL_SRC="../sdl-etl-jobs/lambda/fail/src/lambda_function.py"
 LAMBDA_MONITOR_EVENT_SRC="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.py"
 LAMBDA_LOG_FORWARDER_SRC="../sdl-monitoring/lambda/log-forwarder/src/lambda_function.py"
-GLUE_SCRIPT_SRC="../sdl-etl-jobs/glue/glue-scripts/src/glue_script.py"
+GLUE_JOB_SUCCESS_SRC="../sdl-etl-jobs/glue/glue-scripts/src/glue_job_success.py"
+GLUE_JOB_FAIL_SRC="../sdl-etl-jobs/glue/glue-scripts/src/glue_job_fail.py"
 LAMBDA_ETL_TASK_ZIP="../sdl-etl-jobs/lambda/etl-task/src/lambda_function.zip"
+LAMBDA_SUCCESS_ZIP="../sdl-etl-jobs/lambda/success/src/lambda_function.zip"
+LAMBDA_FAIL_ZIP="../sdl-etl-jobs/lambda/fail/src/lambda_function.zip"
 LAMBDA_MONITOR_EVENT_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.zip"
 LAMBDA_LOG_FORWARDER_ZIP="../sdl-monitoring/lambda/log-forwarder/src/lambda_function.zip"
-GLUE_SCRIPT_ZIP="../sdl-etl-jobs/glue/glue-scripts/src/glue_script.zip"
+GLUE_JOB_SUCCESS_ZIP="../sdl-etl-jobs/glue/glue-scripts/src/glue_job_success.zip"
+GLUE_JOB_FAIL_ZIP="../sdl-etl-jobs/glue/glue-scripts/src/glue_job_fail.zip"
 LAMBDA_MONITOR_LAYER_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
 
 # Zip the Lambda function and Glue script
 zip -j $LAMBDA_ETL_TASK_ZIP $LAMBDA_ETL_TASK_SRC
+zip -j $LAMBDA_SUCCESS_ZIP $LAMBDA_SUCCESS_SRC
+zip -j $LAMBDA_FAIL_ZIP $LAMBDA_FAIL_SRC
 zip -j $LAMBDA_MONITOR_EVENT_ZIP $LAMBDA_MONITOR_EVENT_SRC
-zip -j $GLUE_SCRIPT_ZIP $GLUE_SCRIPT_SRC
+zip -j $GLUE_JOB_SUCCESS_ZIP $GLUE_JOB_SUCCESS_SRC
+zip -j $GLUE_JOB_FAIL_ZIP $GLUE_JOB_FAIL_SRC
 zip -j $LAMBDA_LOG_FORWARDER_ZIP $LAMBDA_LOG_FORWARDER_SRC
 
 # Get the S3 bucket name from the CloudFormation stack outputs
@@ -31,10 +40,16 @@ fi
 
 echo "S3 bucket: $BUCKET_NAME"
 
+# Delete all objects from the S3 bucket
+aws s3 rm s3://$BUCKET_NAME --recursive
+
 # Upload the Lambda function and Glue script to the S3 bucket
 aws s3 cp $LAMBDA_ETL_TASK_ZIP s3://$BUCKET_NAME/lambda/etl-task/src/lambda_function.zip
+aws s3 cp $LAMBDA_SUCCESS_ZIP s3://$BUCKET_NAME/lambda/success/src/lambda_function.zip
+aws s3 cp $LAMBDA_FAIL_ZIP s3://$BUCKET_NAME/lambda/fail/src/lambda_function.zip
 aws s3 cp $LAMBDA_MONITOR_EVENT_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/lambda_function.zip
-aws s3 cp $GLUE_SCRIPT_ZIP s3://$BUCKET_NAME/glue/glue-scripts/src/glue_script.zip
+aws s3 cp $GLUE_JOB_SUCCESS_ZIP s3://$BUCKET_NAME/glue/glue-scripts/src/glue_job_success.zip
+aws s3 cp $GLUE_JOB_FAIL_ZIP s3://$BUCKET_NAME/glue/glue-scripts/src/glue_job_fail.zip
 aws s3 cp $LAMBDA_LOG_FORWARDER_ZIP s3://$BUCKET_NAME/lambda/log-forwarder/src/lambda_function.zip
 aws s3 cp $LAMBDA_MONITOR_LAYER_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/layer.zip
 

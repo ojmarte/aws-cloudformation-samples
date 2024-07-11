@@ -52,6 +52,15 @@ Resources:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-landing-bucket"
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: ".csv"
+            Function: !GetAtt rETLTaskLambda.Arn
   
   rProcessedBucket:
     Type: 'AWS::S3::Bucket'
@@ -76,16 +85,78 @@ Resources:
         S3Key: 'lambda/etl-task/src/lambda_function.zip'
       Runtime: python3.12
       Handler: lambda_function.lambda_handler
+
+  rETLTaskLambdaInvokeConfig:
+    Type: 'AWS::Lambda::EventInvokeConfig'
+    Properties: 
+      FunctionName: !Ref rETLTaskLambda
+      Qualifier: "$LATEST"
+      MaximumRetryAttempts: 2
+      MaximumEventAgeInSeconds: 3600
+      DestinationConfig: 
+        OnSuccess: 
+          Destination: !GetAtt rETLTaskSuccessLambda.Arn
+        OnFailure: 
+          Destination: !GetAtt rETLTaskFailureLambda.Arn
   
-  rGlueCrawler:
+    # Success handling Lambda function
+  rETLTaskSuccessLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Description: !Sub "Handles successful execution of ETL tasks"
+      FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-etl-task-success"
+      MemorySize: 128
+      Role: !GetAtt rLambdaExecutionRole.Arn
+      Timeout: 300
+      Code:
+        S3Bucket: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
+        S3Key: 'lambda/success/src/lambda_function.zip'
+      Runtime: python3.12
+      Handler: success_lambda_function.lambda_handler
+
+  # Failure handling Lambda function
+  rETLTaskFailureLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Description: !Sub "Handles failure execution of ETL tasks"
+      FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-etl-task-failure"
+      MemorySize: 128
+      Role: !GetAtt rLambdaExecutionRole.Arn
+      Timeout: 300
+      Code:
+        S3Bucket: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
+        S3Key: 'lambda/fail/src/lambda_function.zip'
+      Runtime: python3.12
+      Handler: failure_lambda_function.lambda_handler
+
+  rGlueCrawlerSuccess:
     Type: 'AWS::Glue::Crawler'
     Properties:
-      Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeCrawler"
+      Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeCrawlerSuccess"
       Role: !GetAtt rGlueServiceRole.Arn
       DatabaseName: !Sub '${pOrg}-${pDomain}-${pEnvironment}-data-lake-database'
       Targets:
         S3Targets:
-          - Path: !Sub 's3://${rLandingBucket}/data/'
+          - Path: !Sub 's3://${rLandingBucket}/data/success/'
+      Configuration: !Sub |
+        {
+          "Version": 1.0,
+          "CrawlerOutput": {
+            "Partitions": {
+              "AddOrUpdateBehavior": "InheritFromTable"
+            }
+          }
+        }
+  
+  rGlueCrawlerFail:
+    Type: 'AWS::Glue::Crawler'
+    Properties:
+      Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeCrawlerFail"
+      Role: !GetAtt rGlueServiceRole.Arn
+      DatabaseName: !Sub '${pOrg}-${pDomain}-${pEnvironment}-data-lake-database'
+      Targets:
+        S3Targets:
+          - Path: !Sub 's3://${rLandingBucket}/data/fail/'
       Configuration: !Sub |
         {
           "Version": 1.0,
@@ -96,20 +167,39 @@ Resources:
           }
         }
 
-  rGlueETLJob:
+  rGlueETLJobSuccess:
     Type: 'AWS::Glue::Job'
     Properties:
-      Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeETLJob"
+      Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeETLJobSuccess"
       Role: !GetAtt rGlueServiceRole.Arn
       Command:
         Name: 'glueetl'
-        ScriptLocation: 's3://${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket/glue/glue-scripts/src/glue_script.zip'
+        ScriptLocation: !Sub 's3://${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket/glue/glue-scripts/src/glue_job_success.zip'
         PythonVersion: '3'
       DefaultArguments:
         "--enable-continuous-log-filter": "true"
+        "--enable-continuous-cloudwatch-log": "true"
         "--enable-metrics": "true"
         "--continuous-log-logGroup": !Ref pGlueJobLogGroupName
-        "--continuous-log-logStreamPrefix": "glue-etl-"
+        "--continuous-log-logStreamPrefix": "glue-etl-success-"
+      MaxRetries: 1
+      Timeout: 2880
+  
+  rGlueETLJobFail:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-DataLakeETLJobFail"
+      Role: !GetAtt rGlueServiceRole.Arn
+      Command:
+        Name: 'glueetl'
+        ScriptLocation: !Sub 's3://${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket/glue/glue-scripts/src/glue_job_fail.zip'
+        PythonVersion: '3'
+      DefaultArguments:
+        "--enable-continuous-log-filter": "true"
+        "--enable-continuous-cloudwatch-log": "true"
+        "--enable-metrics": "true"
+        "--continuous-log-logGroup": !Ref pGlueJobLogGroupName
+        "--continuous-log-logStreamPrefix": "glue-etl-fail-"
       MaxRetries: 1
       Timeout: 2880
   
@@ -134,6 +224,7 @@ Resources:
                   - 's3:*'
                   - 'logs:*'
                   - 'cloudwatch:*'
+                  - 'glue:*'
                 Resource: '*'
               - Effect: 'Allow'
                 Action:
@@ -154,15 +245,37 @@ Resources:
               Service: 'lambda.amazonaws.com'
             Action: 'sts:AssumeRole'
       Policies:
-        - PolicyName: 'LambdaPolicy'
+        - PolicyName: LambdaExecutionPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Effect: 'Allow'
+              - Effect: Allow
                 Action:
-                  - 'logs:*'
-                  - 's3:*'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource: !Sub "arn:aws:s3:::${rLandingBucket}/*"
+              - Effect: Allow
+                Action: 'glue:StartJobRun'
+                Resource: '*'
+
+  rrETLTaskLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt rProcessDataLambda.Arn
+      Principal: 's3.amazonaws.com'
+      SourceAccount: !Sub "${AWS::AccountId}"
+      SourceArn: !GetAtt rLandingBucket.Arn
 
   rGlueJobLogGroup:
     Type: 'AWS::Logs::LogGroup'
