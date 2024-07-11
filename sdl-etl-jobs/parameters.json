@@ -21,11 +21,15 @@
     },
     {
       "ParameterKey": "pGlueJobLogGroupName",
-      "ParameterValue": "my-glue-job-log-group"
+      "ParameterValue": "sdl-glue-job-logs"
     },
     {
       "ParameterKey": "pGlueCrawlerLogGroupName",
-      "ParameterValue": "my-glue-crawler-log-group"
+      "ParameterValue": "sdl-glue-crawler-logs"
+    },
+    {
+      "ParameterKey": "pLambdaLogGroup",
+      "ParameterValue": "sdl-lambda-logs"
     }
   ]
   
