@@ -1,9 +1,5 @@
 [
     {
-      "ParameterKey": "pPipelineReference",
-      "ParameterValue": "none"
-    },
-    {
       "ParameterKey": "pOrg",
       "ParameterValue": "my-org"
     },

@@ -2,19 +2,19 @@
 
 # Variables
 STACK_NAME="sdl-foundation-stack"
-TEMPLATE_FILE="../sdl-foundation/template.yaml"
-PARAMETERS_FILE="../sdl-foundation/parameters.json"
+TEMPLATE_FILE="../../sdl-foundation/template.yaml"
+PARAMETERS_FILE="../../sdl-foundation/parameters.json"
 CHANGE_SET_NAME="$STACK_NAME-change-set"
 
-LAMBDA_GLUE_CRAWLER_TRIGGER_SRC="../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.py"
-LAMBDA_GLUE_JOB_TRIGGER_SRC="../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.py"
-LAMBDA_MONITOR_EVENT_SRC="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.py"
-GLUE_JOB_SCRIPT_SRC="../sdl-etl-jobs/glue/script/src/glue_job.py"
+LAMBDA_GLUE_CRAWLER_TRIGGER_SRC="../../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.py"
+LAMBDA_GLUE_JOB_TRIGGER_SRC="../../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.py"
+LAMBDA_MONITOR_EVENT_SRC="../../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.py"
+GLUE_JOB_SCRIPT_SRC="../../sdl-etl-jobs/glue/script/src/glue_job.py"
 
-LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.zip"
-LAMBDA_GLUE_JOB_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.zip"
-LAMBDA_MONITOR_EVENT_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.zip"
-LAMBDA_MONITOR_LAYER_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
+LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP="../../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.zip"
+LAMBDA_GLUE_JOB_TRIGGER_ZIP="../../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.zip"
+LAMBDA_MONITOR_EVENT_ZIP="../../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.zip"
+LAMBDA_MONITOR_LAYER_ZIP="../../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
 
 # Zip the Lambda function and Glue script
 zip -j $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP $LAMBDA_GLUE_CRAWLER_TRIGGER_SRC

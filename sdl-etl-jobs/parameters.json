@@ -1,9 +1,5 @@
 [
     {
-      "ParameterKey": "pPipelineReference",
-      "ParameterValue": "none"
-    },
-    {
       "ParameterKey": "pOrg",
       "ParameterValue": "my-org"
     },
@@ -14,10 +10,6 @@
     {
       "ParameterKey": "pEnvironment",
       "ParameterValue": "dev"
-    },
-    {
-      "ParameterKey": "pCloudWatchLogsRetentionInDays",
-      "ParameterValue": "1"
     },
     {
       "ParameterKey": "pLandingBucket",

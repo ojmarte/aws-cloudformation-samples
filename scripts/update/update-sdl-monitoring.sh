@@ -2,8 +2,8 @@
 
 # Variables
 STACK_NAME="sdl-monitoring-stack"
-TEMPLATE_FILE="../sdl-monitoring/template.yaml"
-PARAMETERS_FILE="../sdl-monitoring/parameters.json"
+TEMPLATE_FILE="../../sdl-monitoring/template.yaml"
+PARAMETERS_FILE="../../sdl-monitoring/parameters.json"
 
 # Check if the template file exists
 if [ ! -f "$TEMPLATE_FILE" ]; then

@@ -2,8 +2,8 @@
 
 # Variables
 STACK_NAME="sdl-data-lake-stack"
-TEMPLATE_FILE="../sdl-etl-jobs/template.yaml"
-PARAMETERS_FILE="../sdl-etl-jobs/parameters.json"
+TEMPLATE_FILE="../../sdl-etl-jobs/template.yaml"
+PARAMETERS_FILE="../../sdl-etl-jobs/parameters.json"
 
 # Create the CloudFormation stack
 aws cloudformation create-stack --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE --parameters file://$PARAMETERS_FILE --capabilities CAPABILITY_NAMED_IAM

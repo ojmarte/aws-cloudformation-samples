@@ -2,18 +2,18 @@
 
 # Variables
 STACK_NAME="sdl-foundation-stack"
-TEMPLATE_FILE="../sdl-foundation/template.yaml"
-PARAMETERS_FILE="../sdl-foundation/parameters.json"
+TEMPLATE_FILE="../../sdl-foundation/template.yaml"
+PARAMETERS_FILE="../../sdl-foundation/parameters.json"
 
-LAMBDA_GLUE_CRAWLER_TRIGGER_SRC="../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.py"
-LAMBDA_GLUE_JOB_TRIGGER_SRC="../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.py"
-LAMBDA_MONITOR_EVENT_SRC="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.py"
-GLUE_JOB_SCRIPT_SRC="../sdl-etl-jobs/glue/script/src/glue_job.py"
+LAMBDA_GLUE_CRAWLER_TRIGGER_SRC="../../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.py"
+LAMBDA_GLUE_JOB_TRIGGER_SRC="../../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.py"
+LAMBDA_MONITOR_EVENT_SRC="../../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.py"
+GLUE_JOB_SCRIPT_SRC="../../sdl-etl-jobs/glue/script/src/glue_job.py"
 
-LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.zip"
-LAMBDA_GLUE_JOB_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.zip"
-LAMBDA_MONITOR_EVENT_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.zip"
-LAMBDA_MONITOR_LAYER_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
+LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP="../../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.zip"
+LAMBDA_GLUE_JOB_TRIGGER_ZIP="../../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.zip"
+LAMBDA_MONITOR_EVENT_ZIP="../../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.zip"
+LAMBDA_MONITOR_LAYER_ZIP="../../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
 
 UPLOAD_TO_AWS=true
 
@@ -53,7 +53,7 @@ if [ "$UPLOAD_TO_AWS" = true ]; then
     aws s3 cp $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP s3://$BUCKET_NAME/lambda/glue-crawler-trigger/src/lambda_function.zip
     aws s3 cp $LAMBDA_GLUE_JOB_TRIGGER_ZIP s3://$BUCKET_NAME/lambda/glue-job-trigger/src/lambda_function.zip
     aws s3 cp $LAMBDA_MONITOR_EVENT_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/lambda_function.zip
-    aws s3 cp $LAMBDA_MONITOR_LAYER_ZIP s3://$BUCKET_NAME/layer/monitor-event-subscriber/src/layer/layer.zip
+    aws s3 cp $LAMBDA_MONITOR_LAYER_ZIP s3://$BUCKET_NAME/layer/monitor-event-subscriber/src/layer.zip
     aws s3 cp $GLUE_JOB_SCRIPT_SRC s3://$BUCKET_NAME/glue/script/src/glue_job.py
     
     echo "Lambda functions and Glue script uploaded to S3 bucket."

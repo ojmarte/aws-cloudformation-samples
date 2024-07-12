@@ -4,7 +4,7 @@
 BUCKET_NAME="my-org-devops-dev-landing-bucket"
 
 # Define the local directory containing the JSON files
-LOCAL_DIR="../data"
+LOCAL_DIR="../../data"
 
 # Loop through each JSON file in the directory and upload it to the S3 bucket
 for FILE in $LOCAL_DIR/*.json; do

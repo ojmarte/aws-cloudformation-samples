@@ -2,8 +2,8 @@
 
 # Variables
 STACK_NAME="sdl-data-lake-stack"
-TEMPLATE_FILE="../sdl-etl-jobs/template.yaml"
-PARAMETERS_FILE="../sdl-etl-jobs/parameters.json"
+TEMPLATE_FILE="../../sdl-etl-jobs/template.yaml"
+PARAMETERS_FILE="../../sdl-etl-jobs/parameters.json"
 CHANGE_SET_NAME="$STACK_NAME-change-set"
 
 # Create a change set

@@ -2,10 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Monitoring stack for serverless data lake
 
 Parameters:
-  pPipelineReference:
-    Description: Reference for the pipeline
-    Type: String
-    Default: none
   pOrg:
     Description: Name of the organization owning the data lake
     Type: String
@@ -42,6 +38,20 @@ Resources:
     Type: 'AWS::SNS::Topic'
     Properties:
       TopicName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-monitor-topic"
+
+  rMonitorTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'events.amazonaws.com'
+            Action: 'sns:Publish'
+            Resource: !Ref rMonitorTopic
+      Topics:
+        - !Ref rMonitorTopic
 
   rMonitorTopicSubscription:
     Type: 'AWS::SNS::Subscription'
@@ -127,18 +137,31 @@ Resources:
       Layers:
         - !Ref rRequestsLayer
 
-  rPermissionForEventBridgeToInvokeLambda:
-    Type: 'AWS::Lambda::Permission'
+  rEventBridgeRole:
+    Type: 'AWS::IAM::Role'
     Properties:
-      FunctionName: !Ref rMonitorEventSubscriber
-      Action: 'lambda:InvokeFunction'
-      Principal: 'events.amazonaws.com'
-      SourceArn: !GetAtt rEventBridgeRule.Arn
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'events.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'EventBridgePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'sns:Publish'
+                Resource: !Ref rMonitorTopic
 
   rEventBridgeRule:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-capture-state-changes"
+      RoleArn: !GetAtt rEventBridgeRole.Arn
       EventPattern:
         source:
           - "aws.glue"
@@ -156,6 +179,7 @@ Resources:
       Targets:
         - Arn: !Ref rMonitorTopic
           Id: "GlueLogsTarget"
+
   
   rMonitorDatabase:
     Type: 'AWS::Glue::Database'
