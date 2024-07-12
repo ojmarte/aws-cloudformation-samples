@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Variables
+STACK_NAME="sdl-monitoring-stack"
+TEMPLATE_FILE="../sdl-monitoring/template.yaml"
+PARAMETERS_FILE="../sdl-monitoring/parameters.json"
+
+# Check if the template file exists
+if [ ! -f "$TEMPLATE_FILE" ]; then
+  echo "Template file $TEMPLATE_FILE does not exist."
+  exit 1
+fi
+
+# Check if the parameters file exists
+if [ ! -f "$PARAMETERS_FILE" ]; then
+  echo "Parameters file $PARAMETERS_FILE does not exist."
+  exit 1
+fi
+
+# Check if the stack exists
+STACK_EXISTS=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME} 2>&1)
+
+if [[ $STACK_EXISTS == *"does not exist"* ]]; then
+  # Stack does not exist, create it
+  echo "Stack ${STACK_NAME} does not exist. Creating stack..."
+  aws cloudformation create-stack --stack-name ${STACK_NAME} --template-body file://${TEMPLATE_FILE} --parameters file://${PARAMETERS_FILE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND
+
+  # Wait for the stack creation to complete
+  echo "Waiting for stack ${STACK_NAME} creation to complete..."
+  aws cloudformation wait stack-create-complete --stack-name ${STACK_NAME}
+
+  # Check the status of the stack
+  STACK_STATUS=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query "Stacks[0].StackStatus" --output text)
+
+  if [ "$STACK_STATUS" == "CREATE_COMPLETE" ]; then
+    echo "Stack ${STACK_NAME} created successfully."
+  else
+    echo "Stack ${STACK_NAME} creation failed with status ${STACK_STATUS}."
+  fi
+else
+  # Stack exists, update it
+  echo "Stack ${STACK_NAME} exists. Updating stack..."
+  aws cloudformation update-stack --stack-name ${STACK_NAME} --template-body file://${TEMPLATE_FILE} --parameters file://${PARAMETERS_FILE} --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND
+
+  # Wait for the stack update to complete
+  echo "Waiting for stack ${STACK_NAME} update to complete..."
+  aws cloudformation wait stack-update-complete --stack-name ${STACK_NAME}
+
+  # Check the status of the stack
+  STACK_STATUS=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query "Stacks[0].StackStatus" --output text)
+
+  if [ "$STACK_STATUS" == "UPDATE_COMPLETE" ]; then
+    echo "Stack ${STACK_NAME} updated successfully."
+  elif [ "$STACK_STATUS" == "UPDATE_ROLLBACK_COMPLETE" ]; then
+    echo "Stack ${STACK_NAME} update failed and rolled back."
+  else
+    echo "Stack ${STACK_NAME} update failed with status ${STACK_STATUS}."
+  fi
+fi

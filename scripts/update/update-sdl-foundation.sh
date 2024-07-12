@@ -14,7 +14,7 @@ GLUE_JOB_SCRIPT_SRC="../sdl-etl-jobs/glue/script/src/glue_job.py"
 LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.zip"
 LAMBDA_GLUE_JOB_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.zip"
 LAMBDA_MONITOR_EVENT_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.zip"
-# LAMBDA_MONITOR_LAYER_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
+LAMBDA_MONITOR_LAYER_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
 
 # Zip the Lambda function and Glue script
 zip -j $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP $LAMBDA_GLUE_CRAWLER_TRIGGER_SRC
@@ -39,6 +39,7 @@ aws s3 rm s3://$BUCKET_NAME --recursive
 aws s3 cp $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP s3://$BUCKET_NAME/lambda/glue-crawler-trigger/src/lambda_function.zip
 aws s3 cp $LAMBDA_GLUE_JOB_TRIGGER_ZIP s3://$BUCKET_NAME/lambda/glue-job-trigger/src/lambda_function.zip
 aws s3 cp $LAMBDA_MONITOR_EVENT_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/lambda_function.zip
+aws s3 cp $LAMBDA_MONITOR_LAYER_ZIP s3://$BUCKET_NAME/layer/monitor-event-subscriber/src/layer.zip
 aws s3 cp $GLUE_JOB_SCRIPT_SRC s3://$BUCKET_NAME/glue/script/src/glue_job.py
 
 echo "Lambda functions and Glue script uploaded to S3 bucket."
@@ -46,7 +47,7 @@ echo "Lambda functions and Glue script uploaded to S3 bucket."
 rm -f $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP
 rm -f $LAMBDA_GLUE_JOB_TRIGGER_ZIP
 rm -f $LAMBDA_MONITOR_EVENT_ZIP
-rm -f $LAMBDA_MONITOR_LAYER_ZIP
+# rm -f $LAMBDA_MONITOR_LAYER_ZIP
 
 # Create a change set
 aws cloudformation create-change-set --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE --parameters file://$PARAMETERS_FILE --capabilities CAPABILITY_NAMED_IAM --change-set-name $CHANGE_SET_NAME

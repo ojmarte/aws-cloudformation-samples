@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-STACK_NAME="my-monitoring-stack"
+STACK_NAME="sdl-monitoring-stack"
 TEMPLATE_FILE="../sdl-monitoring/template.yaml"
 PARAMETERS_FILE="../sdl-monitoring/parameters.json"
 

@@ -16,20 +16,7 @@
       "ParameterValue": "dev"
     },
     {
-      "ParameterKey": "pCloudWatchLogsRetentionInDays",
-      "ParameterValue": "1"
-    },
-    {
-      "ParameterKey": "pGlueJobLogGroupName",
-      "ParameterValue": "my-glue-job-log-group"
-    },
-    {
-      "ParameterKey": "pGlueCrawlerLogGroupName",
-      "ParameterValue": "my-glue-crawler-log-group"
-    },
-    {
       "ParameterKey": "pTeamsWebhookURL",
-      "ParameterValue": "https://dominionglobal.webhook.office.com/webhookb2/a774b616-ce27-42ee-a3ba-611123004e65@e4e1bc33-e283-4312-bb37-89010224b7fe/IncomingWebhook/a67f2168c0214646ae3051742b31f5fd/ba2d5eb8-7ec9-40a5-829f-e15e7174ca5f"
+      "ParameterValue": "https://dominionglobal.webhook.office.com/webhookb2/a774b616-ce27-42ee-a3ba-611123004e65@e4e1bc33-e283-4312-bb37-89010224b7fe/IncomingWebhook/07e7b5b728b449ff8ce23cd135582a69/ba2d5eb8-7ec9-40a5-829f-e15e7174ca5f"
     }
 ]
-  

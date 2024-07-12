@@ -13,7 +13,7 @@ GLUE_JOB_SCRIPT_SRC="../sdl-etl-jobs/glue/script/src/glue_job.py"
 LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.zip"
 LAMBDA_GLUE_JOB_TRIGGER_ZIP="../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.zip"
 LAMBDA_MONITOR_EVENT_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/lambda_function.zip"
-# LAMBDA_MONITOR_LAYER_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
+LAMBDA_MONITOR_LAYER_ZIP="../sdl-monitoring/lambda/monitor-event-subscriber/src/layer/layer.zip"
 
 UPLOAD_TO_AWS=true
 
@@ -53,8 +53,9 @@ if [ "$UPLOAD_TO_AWS" = true ]; then
     aws s3 cp $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP s3://$BUCKET_NAME/lambda/glue-crawler-trigger/src/lambda_function.zip
     aws s3 cp $LAMBDA_GLUE_JOB_TRIGGER_ZIP s3://$BUCKET_NAME/lambda/glue-job-trigger/src/lambda_function.zip
     aws s3 cp $LAMBDA_MONITOR_EVENT_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/lambda_function.zip
+    aws s3 cp $LAMBDA_MONITOR_LAYER_ZIP s3://$BUCKET_NAME/layer/monitor-event-subscriber/src/layer/layer.zip
     aws s3 cp $GLUE_JOB_SCRIPT_SRC s3://$BUCKET_NAME/glue/script/src/glue_job.py
-    # aws s3 cp $LAMBDA_MONITOR_LAYER_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subscriber/src/layer/layer.zip
+    
     echo "Lambda functions and Glue script uploaded to S3 bucket."
 else
     echo "Skipping upload to S3 bucket as per user request."
@@ -63,4 +64,4 @@ fi
 rm -f $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP
 rm -f $LAMBDA_GLUE_JOB_TRIGGER_ZIP
 rm -f $LAMBDA_MONITOR_EVENT_ZIP
-rm -f $LAMBDA_MONITOR_LAYER_ZIP
+# rm -f $LAMBDA_MONITOR_LAYER_ZIP
