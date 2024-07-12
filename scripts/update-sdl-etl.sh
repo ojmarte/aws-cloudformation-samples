@@ -4,18 +4,25 @@
 STACK_NAME="sdl-data-lake-stack"
 TEMPLATE_FILE="../sdl-etl-jobs/template.yaml"
 PARAMETERS_FILE="../sdl-etl-jobs/parameters.json"
+CHANGE_SET_NAME="$STACK_NAME-change-set"
 
-# Update the CloudFormation stack
-aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE --parameters file://$PARAMETERS_FILE --capabilities CAPABILITY_NAMED_IAM
+# Create a change set
+aws cloudformation create-change-set --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE --parameters file://$PARAMETERS_FILE --capabilities CAPABILITY_NAMED_IAM --change-set-name $CHANGE_SET_NAME
 
-# Wait for the stack to be updated
-aws cloudformation wait stack-update-complete --stack-name $STACK_NAME
+# Wait for the change set to be created
+aws cloudformation wait change-set-create-complete --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME
 
-# Check the stack status
-STACK_STATUS=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].StackStatus" --output text)
+# Describe the change set to check for changes
+CHANGE_SET_STATUS=$(aws cloudformation describe-change-set --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME --query 'Status' --output text)
+EXECUTION_STATUS=$(aws cloudformation describe-change-set --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME --query 'ExecutionStatus' --output text)
 
-if [ "$STACK_STATUS" == "UPDATE_COMPLETE" ]; then
-    echo "Stack $STACK_NAME updated successfully."
+# Check if the change set has changes
+if [[ "$CHANGE_SET_STATUS" == "CREATE_COMPLETE" && "$EXECUTION_STATUS" == "AVAILABLE" ]]; then
+    echo "Changes detected. Executing update..."
+    aws cloudformation execute-change-set --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME
 else
-    echo "Failed to update stack $STACK_NAME. Status: $STACK_STATUS"
+    echo "No changes detected. Deleting change set..."
+    aws cloudformation delete-change-set --change-set-name $CHANGE_SET_NAME --stack-name $STACK_NAME
 fi
+
+echo "Updated Successfully"

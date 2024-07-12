@@ -52,7 +52,7 @@ Resources:
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: s3:ObjectCreated:*
-            Function: !GetAtt rLambdaFunction.Arn
+            Function: !GetAtt rLambdaCrawlerFunction.Arn
 
   rProcessedBucket:
     Type: AWS::S3::Bucket
@@ -92,14 +92,30 @@ Resources:
                   - s3:DeleteObject
                 Resource: "*"
   
-  rLambdaFunction:
+  rLambdaCrawlerFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-glue-trigger-function"
+      FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-glue-crawler-trigger"
       Role: !GetAtt rLambdaExecutionRole.Arn
       Code:
         S3Bucket: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
-        S3Key: 'lambda/glue-trigger-function/src/lambda_function.zip'
+        S3Key: 'lambda/glue-crawler-trigger/src/lambda_function.zip'
+      Runtime: python3.12
+      Handler: lambda_function.lambda_handler
+      Environment:
+        Variables:
+          pOrg: !Ref pOrg
+          pDomain: !Ref pDomain
+          pEnvironment: !Ref pEnvironment
+
+  rLambdaJobFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${pOrg}-${pDomain}-${pEnvironment}-glue-job-trigger"
+      Role: !GetAtt rLambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Sub "${pOrg}-${pDomain}-${pEnvironment}-lambda-glue-bucket"
+        S3Key: 'lambda/glue-job-trigger/src/lambda_function.zip'
       Runtime: python3.12
       Handler: lambda_function.lambda_handler
       Environment:
@@ -111,10 +127,17 @@ Resources:
   rLambdaInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref rLambdaFunction
+      FunctionName: !Ref rLambdaCrawlerFunction
       Action: lambda:InvokeFunction
       Principal: s3.amazonaws.com
-      # SourceArn: !GetAtt rLandingBucket.Arn
+
+  LambdaJobInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref rLambdaJobFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt GlueDatabaseStateChangeEventRule.Arn
 
   rLandingBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -149,6 +172,25 @@ Resources:
             }
           }
         }
+
+  GlueDatabaseStateChangeEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-GlueDatabaseStateChangeEventRule"
+      EventPattern:
+        source:
+          - "aws.glue"
+        detail-type:
+          - "Glue Data Catalog Database State Change"
+        detail:
+          databaseName:
+            - !Sub "${pOrg}-${pDomain}-${pEnvironment}-database"
+          typeOfChange:
+            - "CreateTable"
+            - "UpdateTable"
+      Targets:
+        - Arn: !GetAtt rLambdaJobFunction.Arn
+          Id: "MyLambdaGlueDatabaseStateChangeTarget"
 
   rGlueJob:
     Type: AWS::Glue::Job

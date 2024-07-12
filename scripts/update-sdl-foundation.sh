@@ -4,6 +4,7 @@
 STACK_NAME="sdl-foundation-stack"
 TEMPLATE_FILE="../sdl-foundation/template.yaml"
 PARAMETERS_FILE="../sdl-foundation/parameters.json"
+CHANGE_SET_NAME="$STACK_NAME-change-set"
 
 LAMBDA_GLUE_CRAWLER_TRIGGER_SRC="../sdl-etl-jobs/lambda/glue-crawler-trigger/src/lambda_function.py"
 LAMBDA_GLUE_JOB_TRIGGER_SRC="../sdl-etl-jobs/lambda/glue-job-trigger/src/lambda_function.py"
@@ -41,6 +42,11 @@ aws s3 cp $LAMBDA_MONITOR_EVENT_ZIP s3://$BUCKET_NAME/lambda/monitor-event-subsc
 aws s3 cp $GLUE_JOB_SCRIPT_SRC s3://$BUCKET_NAME/glue/script/src/glue_job.py
 
 echo "Lambda functions and Glue script uploaded to S3 bucket."
+
+rm -f $LAMBDA_GLUE_CRAWLER_TRIGGER_ZIP
+rm -f $LAMBDA_GLUE_JOB_TRIGGER_ZIP
+rm -f $LAMBDA_MONITOR_EVENT_ZIP
+rm -f $LAMBDA_MONITOR_LAYER_ZIP
 
 # Create a change set
 aws cloudformation create-change-set --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE --parameters file://$PARAMETERS_FILE --capabilities CAPABILITY_NAMED_IAM --change-set-name $CHANGE_SET_NAME
