@@ -4,7 +4,7 @@
 STACK_NAME="sdl-monitoring-stack"
 
 # Get the S3 bucket name from the CloudFormation stack outputs
-BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='oLambdaGlueS3BucketName'].OutputValue" --output text)
+BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='oMonitoringBucketName'].OutputValue" --output text)
 
 # Check if the bucket name is retrieved
 if [ -z "$BUCKET_NAME" ]; then

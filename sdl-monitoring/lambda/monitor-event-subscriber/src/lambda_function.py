@@ -30,6 +30,7 @@ def lambda_handler(event, context):
                 "text": f"Exception: {str(e)}. Event details: {json.dumps(event)}"
             }
             requests.post(teams_webhook_url, json=alert_message)
+            
     
     # Check if the event contains 'Records'
     if 'Records' not in event:
