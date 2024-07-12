@@ -111,7 +111,7 @@ Resources:
       FunctionName: !Ref rLambdaJobFunction
       Action: "lambda:InvokeFunction"
       Principal: "events.amazonaws.com"
-      SourceArn: !GetAtt GlueDatabaseStateChangeEventRule.Arn
+      SourceArn: !GetAtt rGlueDatabaseStateChangeEventRule.Arn
 
   rLandingBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -147,7 +147,7 @@ Resources:
           }
         }
 
-  GlueDatabaseStateChangeEventRule:
+  rGlueDatabaseStateChangeEventRule:
     Type: AWS::Events::Rule
     Properties:
       Name: !Sub "${pOrg}-${pDomain}-${pEnvironment}-GlueDatabaseStateChangeEventRule"
