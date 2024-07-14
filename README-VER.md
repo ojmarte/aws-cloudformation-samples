@@ -1,4 +1,4 @@
-Sure! Here’s the README with added emoticons to make it more engaging and easier to understand.
+Certainly! Here’s the README with corrected table contents and an improved layout while following the same structure and not modifying anything else:
 
 ---
 
@@ -185,10 +185,6 @@ The source code for the Lambda functions and Glue jobs is stored in the `rLambda
   - `rGlueServiceRole`
 - **Purpose:** Manages the Glue crawler and its service role.
 
-Certainly! Here is the updated "Resources Documentation" section based on the provided directory structure:
-
----
-
 ## 📚 Resource Documentation
 
 ### Overview
@@ -213,7 +209,9 @@ This repository contains three main CloudFormation templates that set up differe
 
 | **Resource**                     | **Type**                 | **Permissions**                                                                                     |
 |----------------------------------|--------------------------|-----------------------------------------------------------------------------------------------------|
-| `rLandingBucket`                 | `AWS::S3::Bucket`        | -                                                                                                   |
+| `rLandingBucket`                 | `AWS::S3::Bucket`        | -                                                                
+
+                                   |
 | `rProcessedBucket`               | `AWS::S3::Bucket`        | -                                                                                                   |
 | `rLambdaExecutionRole`           | `AWS::IAM::Role`         | `AssumeRole`, `glue:*`, `logs:*`, `s3:*`                                                            |
 | `rLambdaCrawlerFunction`         | `AWS::Lambda::Function`  | `lambda:InvokeFunction`                                                                             |
