@@ -1,4 +1,4 @@
-# AWS CloudFormation Samples: ETL and Monitoring
+# AWS CloudFormation Samples: ETL and Monitoring (Proof Of Concept)
 
 ## Table of Contents
 1. [📐 Architecture Overview](#architecture-overview)
