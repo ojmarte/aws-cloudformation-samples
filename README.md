@@ -1,7 +1,3 @@
-Sure! Here’s the README with added emoticons to make it more engaging and easier to understand.
-
----
-
 # AWS CloudFormation Samples: ETL and Monitoring
 
 ## Table of Contents
@@ -185,10 +181,6 @@ The source code for the Lambda functions and Glue jobs is stored in the `rLambda
   - `rGlueServiceRole`
 - **Purpose:** Manages the Glue crawler and its service role.
 
-Certainly! Here is the updated "Resources Documentation" section based on the provided directory structure:
-
----
-
 ## 📚 Resource Documentation
 
 ### Overview
@@ -197,10 +189,10 @@ This repository contains three main CloudFormation templates that set up differe
 ### Templates
 1. **sdl-foundation**
 
-| **Resource**               | **Type**             | **Permissions**                                                                                       |
-|----------------------------|----------------------|--------------------------------------------------------------------------------------------------------|
-| `rLambdaGlueS3Bucket`      | `AWS::S3::Bucket`    | -                                                                                                      |
-| `oLambdaGlueS3BucketName`  | `Output`             | -                                                                                                      |
+| **Resource**               | **Associated Resources**                    |
+|----------------------------|----------------------------------------------|
+| `rLambdaGlueS3Bucket`      | -                                            |
+| `oLambdaGlueS3BucketName`  | `rLambdaGlueS3Bucket`                        |
 
    - **Description:** This template creates the foundational resources, including the S3 bucket (`rLambdaGlueS3Bucket`) that stores the Lambda and Glue job scripts. This bucket is part of the Code Source S3 Bucket group.
    - **Files:**
@@ -211,24 +203,24 @@ This repository contains three main CloudFormation templates that set up differe
 
 2. **sdl-etl-jobs**
 
-| **Resource**                     | **Type**                 | **Permissions**                                                                                     |
-|----------------------------------|--------------------------|-----------------------------------------------------------------------------------------------------|
-| `rLandingBucket`                 | `AWS::S3::Bucket`        | -                                                                                                   |
-| `rProcessedBucket`               | `AWS::S3::Bucket`        | -                                                                                                   |
-| `rLambdaExecutionRole`           | `AWS::IAM::Role`         | `AssumeRole`, `glue:*`, `logs:*`, `s3:*`                                                            |
-| `rLambdaCrawlerFunction`         | `AWS::Lambda::Function`  | `lambda:InvokeFunction`                                                                             |
-| `rLambdaJobFunction`             | `AWS::Lambda::Function`  | `lambda:InvokeFunction`                                                                             |
-| `rLambdaInvokePermission`        | `AWS::Lambda::Permission`| `lambda:InvokeFunction`, `Principal: s3.amazonaws.com`                                               |
-| `LambdaJobInvokePermission`      | `AWS::Lambda::Permission`| `lambda:InvokeFunction`, `Principal: events.amazonaws.com`                                           |
-| `rLandingBucketPolicy`           | `AWS::S3::BucketPolicy`  | `s3:*`, `Principal: lambda.amazonaws.com`                                                           |
-| `rGlueCrawler`                   | `AWS::Glue::Crawler`     | `glue:*`, `s3:*`, `logs:*`                                                                          |
-| `rGlueDatabaseStateChangeEventRule`| `AWS::Events::Rule`     | -                                                                                                   |
-| `rGlueJob`                       | `AWS::Glue::Job`         | `glue:*`, `s3:*`, `logs:*`                                                                          |
-| `rGlueServiceRole`               | `AWS::IAM::Role`         | `AssumeRole`, `glue:*`, `s3:*`, `logs:*`                                                            |
-| `oGlueCrawlerName`               | `Output`                 | -                                                                                                   |
-| `oGlueJobName`                   | `Output`                 | -                                                                                                   |
-| `oLandingBucketName`             | `Output`                 | -                                                                                                   |
-| `oProcessedBucketName`           | `Output`                 | -                                                                                                   |
+| **Resource**                     | **Associated Resources**                                         |
+|----------------------------------|-------------------------------------------------------------------|
+| `rLandingBucket`                 | `rLandingBucketPolicy`, `rLambdaInvokePermission`                |
+| `rProcessedBucket`               | -                                                                |
+| `rLambdaExecutionRole`           | `rLambdaCrawlerFunction`, `rLambdaJobFunction`                   |
+| `rLambdaCrawlerFunction`         | `rLambdaExecutionRole`, `rLambdaInvokePermission`                |
+| `rLambdaJobFunction`             | `rLambdaExecutionRole`, `LambdaJobInvokePermission`              |
+| `rLambdaInvokePermission`        | `rLambdaCrawlerFunction`, `rLandingBucket`                       |
+| `LambdaJobInvokePermission`      | `rLambdaJobFunction`, `rGlueDatabaseStateChangeEventRule`        |
+| `rLandingBucketPolicy`           | `rLandingBucket`                                                 |
+| `rGlueCrawler`                   | `rGlueServiceRole`                                               |
+| `rGlueDatabaseStateChangeEventRule`| `rGlueCrawler`, `rLambdaJobFunction`                           |
+| `rGlueJob`                       | `rGlueServiceRole`                                               |
+| `rGlueServiceRole`               | `rGlueJob`, `rGlueCrawler`                                       |
+| `oGlueCrawlerName`               | `rGlueCrawler`                                                   |
+| `oGlueJobName`                   | `rGlueJob`                                                       |
+| `oLandingBucketName`             | `rLandingBucket`                                                 |
+| `oProcessedBucketName`           | `rProcessedBucket`                                               |
 
    - **Description:** This template contains the deployment of the ETL architecture, including the Lambda functions, Glue crawlers, and Glue jobs that make up the ETL process.
    - **Files:**
@@ -242,25 +234,25 @@ This repository contains three main CloudFormation templates that set up differe
 
 3. **sdl-monitoring**
 
-| **Resource**              | **Type**                   | **Permissions**                                                                                     |
-|---------------------------|----------------------------|-----------------------------------------------------------------------------------------------------|
-| `rDataLakeMonitoringBucket` | `AWS::S3::Bucket`          | -                                                                                                   |
-| `rMonitorSecret`          | `AWS::SecretsManager::Secret` | -                                                                                                   |
-| `rMonitorTopic`           | `AWS::SNS::Topic`          | `sns:Publish`, `Principal: events.amazonaws.com`                                                    |
-| `rMonitorTopicPolicy`     | `AWS::SNS::TopicPolicy`    | `sns:Publish`, `Principal: events.amazonaws.com`                                                    |
-| `rMonitorTopicSubscription`| `AWS::SNS::Subscription`   | -                                                                                                   |
-| `rPermissionForSNS`       | `AWS::Lambda::Permission`  | `lambda:InvokeFunction`, `Principal: sns.amazonaws.com`                                             |
-| `rMonitorLambdaRole`      | `AWS::IAM::Role`           | `logs:*`, `sns:Publish`, `s3:*`                                                                     |
-| `rRequestsLayer`          | `AWS::Lambda::LayerVersion`| -                                                                                                   |
-| `rMonitorEventSubscriber` | `AWS::Lambda::Function`    | -                                                                                                   |
-| `rEventBridgeRole`        | `AWS::IAM::Role`           | `sns:Publish`                                                                                       |
-| `rEventBridgeRule`        | `AWS::Events::Rule`        | -                                                                                                   |
-| `rMonitorDatabase`        | `AWS::Glue::Database`      | -                                                                                                   |
-| `rMonitorTable`           | `AWS::Glue::Table`         | -                                                                                                   |
-| `oMonitoringBucketName`   | `Output`                   | -                                                                                                   |
-| `oMonitorLambdaFunction`  | `Output`                   | -                                                                                                   |
-| `oAthenaDatabaseName`     | `Output`                   | -                                                                                                   |
-| `oAthenaTableName`        | `Output`                   | -                                                                                                   |
+| **Resource**              | **Associated Resources**                                                                                     |
+|---------------------------|--------------------------------------------------------------------------------------------------------------|
+| `rDataLakeMonitoringBucket` | -                                                                                                          |
+| `rMonitorSecret`          | `rMonitorEventSubscriber`                                                                                    |
+| `rMonitorTopic`           | `rMonitorTopicPolicy`, `rMonitorTopicSubscription`                                                           |
+| `rMonitorTopicPolicy`     | `rMonitorTopic`                                                                                              |
+| `rMonitorTopicSubscription`| `rMonitorTopic`                                                                                            |
+| `rPermissionForSNS`       | `rMonitorEventSubscriber`                                                                                    |
+| `rMonitorLambdaRole`      | `rMonitorEventSubscriber`                                                                                    |
+| `rRequestsLayer`          | `rMonitorEventSubscriber`                                                                                    |
+| `rMonitorEventSubscriber` | `rMonitorLambdaRole`, `rPermissionForSNS`, `rRequestsLayer`, `rMonitorSecret`                                |
+| `rEventBridgeRole`        | `rEventBridgeRule`                                                                                           |
+| `rEventBridgeRule`        | `rEventBridgeRole`                                                                                           |
+| `rMonitorDatabase`        | -                                                                                                            |
+| `rMonitorTable`           | -                                                                                                            |
+| `oMonitoringBucketName`   | `rDataLakeMonitoringBucket`                                                                                  |
+| `oMonitorLambdaFunction`  | `rMonitorEventSubscriber`                                                                                    |
+| `oAthenaDatabaseName`     | `rMonitorDatabase`                                                                                           |
+| `oAthenaTableName`        | `rMonitorTable`                                                                                              |
 
    - **Description:** This template sets up the monitoring system, including EventBridge rules, SNS topics, and Lambda functions for monitoring and alerting.
    - **Files:**
